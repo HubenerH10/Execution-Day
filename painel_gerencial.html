@@ -197,6 +197,23 @@ input[type=range]:disabled::-webkit-slider-thumb{border-color:var(--faint)}
 .kc .l{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;font-family:'IBM Plex Mono',monospace}
 .kc .v{font-family:'Archivo';font-weight:800;font-size:23px;margin-top:6px;line-height:1}.kc .v small{font-size:12px;color:var(--muted)}.kc .s{font-size:9.5px;color:var(--faint);margin-top:4px}
 .subcard{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:12px 15px;display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.subcard .x{color:var(--faint);cursor:pointer}
+.subwrap{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;margin-bottom:9px;overflow:hidden}
+.subhead{padding:12px 15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:10px}
+.subhead:hover{background:rgba(255,255,255,.02)}
+.subhead .x{color:var(--faint);cursor:pointer;font-size:13px}
+.schev{display:inline-block;color:var(--muted);margin-right:9px;font-size:10px;transition:transform .15s}
+.subwrap.open .schev{transform:rotate(90deg)}
+.subdet{display:none;padding:2px 15px 12px 15px;border-top:1px solid var(--line)}
+.subwrap.open .subdet{display:block}
+.subop{margin-top:11px}
+.subop-h{font-size:12px;color:var(--txt);font-weight:700;margin-bottom:5px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.subop-h .mut{color:var(--muted);font-weight:400;font-size:11px}
+.scli{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.scli:last-child{border-bottom:0}
+.scli-n{font-size:11.5px;color:var(--txt)}
+.scli-n .mut{color:var(--faint);font-size:10px}
+.scli-a{font-size:11px;color:var(--good);text-align:right;white-space:nowrap;flex-shrink:0}
+.scli-a .pl{color:var(--muted)}
 .empty{color:var(--faint);font-size:12.5px;text-align:center;padding:18px 0}
 .actrow{display:grid;grid-template-columns:1fr 60px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
 .actbar{height:7px;border-radius:5px;background:var(--panel-2);overflow:hidden;margin-top:4px}.actbar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand-2),#2b6fd6);border-radius:5px}
@@ -244,6 +261,7 @@ const colorFor=s=>s>=85?'var(--good)':s>=70?'var(--warn)':'var(--crit)';
 function gauge(val,sz,target){const R=sz/2-sz*0.08,C=2*Math.PI*R,f=Math.max(0,Math.min(1,val/100)),col=colorFor(val);const tx=target!=null?`<circle cx="${sz/2}" cy="${sz/2}" r="${R}" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="3 ${C}" transform="rotate(${-90+target*3.6} ${sz/2} ${sz/2})" opacity=".6"/>`:'';return `<svg viewBox="0 0 ${sz} ${sz}" style="width:100%;height:100%"><circle cx="${sz/2}" cy="${sz/2}" r="${R}" fill="none" stroke="var(--panel-2)" stroke-width="${sz*0.09}"/><circle cx="${sz/2}" cy="${sz/2}" r="${R}" fill="none" stroke="${col}" stroke-width="${sz*0.09}" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-f)}" transform="rotate(-90 ${sz/2} ${sz/2})" style="transition:.6s"/>${tx}</svg>`;}
 
 let subs={};
+let openSubs=new Set();
 function urlEff(){try{return localStorage.getItem('iceSyncUrl')||SYNC_URL;}catch(e){return SYNC_URL;}}
 (function(){try{const r=localStorage.getItem('iceConsolV4');if(r)subs=JSON.parse(r)||{};}catch(e){}})();
 function saveLocal(){try{localStorage.setItem('iceConsolV4',JSON.stringify(subs));}catch(e){}}
@@ -284,8 +302,11 @@ function render(){const t=consol();const v=document.getElementById('view');
   <div class="card"><h3>Envios recebidos</h3><div id="subList" style="margin-top:8px"></div></div>`;
   const mx=Math.max(...ranked.map(r=>r.ice));
   document.getElementById('rank').innerHTML=ranked.map((r,i)=>`<div class="gc-row" style="grid-template-columns:30px 1fr 110px 46px"><div class="gnm">${i+1}.</div><div><div style="font-size:12.5px;font-weight:700">${r.g} ${r.sub?'<span style=color:var(--good)>✓</span>':'<span style=color:var(--faint)>·</span>'}</div><div class="bar-track" style="height:8px;margin-top:4px"><div class="now" style="width:${r.ice/mx*100}%;background:${colorFor(r.ice)}"></div></div></div><div style="font-size:10.5px;color:var(--muted);text-align:right">${r.sub?r.cliAc+' clientes':'aguardando'}</div><div class="num" style="text-align:right;color:${colorFor(r.ice)}">${nf(r.ice)}</div></div>`).join('');
-  const arr=Object.values(subs);document.getElementById('subList').innerHTML=arr.length?arr.map(s=>`<div class="subcard"><div><b>${s.gerencia}</b> <span style="color:var(--muted);font-size:11px">— ${s.lider}</span><div style="font-size:11px;color:var(--muted)">ICE ${nf(s.iceBase)}→${nf(s.iceSim)} · ${s.clientesComAcao||0} clientes · ${nf(s.pontosRevertidos||0,0)} pts · ${(s.clientesSemReversao||0)} sem reversão · ${s.metaAtingida?'<span style=color:var(--good)>meta ✓</span>':'<span style=color:var(--crit)>meta ✗</span>'}</div></div><div class="x" data-g="${s.gerencia}">✕</div></div>`).join(''):'<div class="empty">Nenhum envio ainda. Assim que um líder clicar "Enviar", aparece aqui.</div>';
-  document.querySelectorAll('#subList .x').forEach(x=>x.onclick=()=>{delete subs[x.dataset.g];saveLocal();render();});
+  const arr=Object.values(subs);
+  const detHTML=(s)=>((s.acoes||[]).length?(s.acoes||[]).map(o=>`<div class="subop"><div class="subop-h"><span>${o.label||o.pilar}</span><span class="mut">${o.nClientes||(o.clientes||[]).length} clientes · ${nf(o.pontos||0,0)} pts · +${nf(o.ganhoEfetivo||0,2)} ICE</span></div>${(o.clientes||[]).map(c=>`<div class="scli"><div class="scli-n">${c.nome||c.cod} <span class="mut">${c.cod||''}${c.canal?' · '+c.canal:''}${c.rota?' · '+c.rota:''}</span></div><div class="scli-a">${nf(c.pontos||0,0)} pts · <b>${c.acao||''}</b>${c.prazo?`<span class="pl"> · ${c.prazo}d</span>`:''}${c.resp?`<span class="pl"> · ${c.resp}</span>`:''}${c.obs?`<span class="pl"> · ${c.obs}</span>`:''}</div></div>`).join('')}</div>`).join(''):'<div style="padding:10px 0;color:var(--faint);font-size:11px">Sem clientes revertidos neste envio.</div>');
+  document.getElementById('subList').innerHTML=arr.length?arr.map(s=>{const op=openSubs.has(s.gerencia);return `<div class="subwrap${op?' open':''}"><div class="subhead" data-tg="${s.gerencia}"><div><span class="schev">▶</span><b>${s.gerencia}</b> <span style="color:var(--muted);font-size:11px">— ${s.lider}</span><div style="font-size:11px;color:var(--muted);margin-top:2px;margin-left:19px">ICE ${nf(s.iceBase)}→${nf(s.iceSim)} · ${s.clientesComAcao||0} clientes · ${nf(s.pontosRevertidos||0,0)} pts · ${(s.clientesSemReversao||0)} sem reversão · ${s.metaAtingida?'<span style=color:var(--good)>meta ✓</span>':'<span style=color:var(--crit)>meta ✗</span>'}</div></div><div class="x" data-g="${s.gerencia}">✕</div></div><div class="subdet">${detHTML(s)}</div></div>`;}).join(''):'<div class="empty">Nenhum envio ainda. Assim que um líder clicar "Enviar", aparece aqui.</div>';
+  document.querySelectorAll('#subList .subhead').forEach(h=>h.onclick=(e)=>{if(e.target.closest('.x'))return;const g=h.dataset.tg;if(openSubs.has(g))openSubs.delete(g);else openSubs.add(g);h.parentElement.classList.toggle('open');});
+  document.querySelectorAll('#subList .x').forEach(x=>x.onclick=(e)=>{e.stopPropagation();delete subs[x.dataset.g];openSubs.delete(x.dataset.g);saveLocal();render();});
 }
 function renderPres(){const t=consol();const ranked=Object.keys(GCS).map(g=>{const s=subs[g];return{g,nome:GCS[g].nome,ice:s?s.iceSim:GCS[g].ice,sub:!!s};}).sort((a,b)=>b.ice-a.ice).slice(0,6);const ra=redeAcoes().slice(0,5);
   document.getElementById('presBody').innerHTML=`<div style="display:flex;gap:5vw;align-items:center;justify-content:center;flex-wrap:wrap"><div style="width:min(32vh,300px);height:min(32vh,300px);position:relative">${gauge(t.ice,300,META)}<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div class="num" style="font-size:clamp(38px,7vw,84px);color:${colorFor(t.ice)}">${nf(t.ice)}</div><div class="eyebrow">ICE consolidado</div></div></div>
