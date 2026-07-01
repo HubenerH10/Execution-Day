@@ -255,10 +255,14 @@ async function loadCloud(silent){const url=urlEff();if(!url){setConn('');return;
   catch(e){setConn('err');}}
 try{const bc=new BroadcastChannel('ice_consolida');bc.onmessage=e=>{const d=e.data;if(d&&(d.tipo||'').startsWith('ice_lider')){subs[d.gerencia]=d;saveLocal();render();}};}catch(e){}
 
-function consol(){let cli=0,ws=0,recup=0,perdTot=0,cliAc=0,cliSem=0,metas=0;
-  Object.keys(GCS).forEach(g=>{const c=GCS[g].clientes;cli+=c;perdTot+=GCS[g].perdidos_total;const s=subs[g];
-    if(s){ws+=(s.iceSim||GCS[g].ice)*c;recup+=(s.pontosRevertidos||0);cliAc+=(s.clientesComAcao||0);cliSem+=(s.clientesSemReversao||0);if(s.metaAtingida)metas++;}else ws+=GCS[g].ice*c;});
-  return{ice:ws/cli,recup,perdTot,cliAc,cliSem,metas,nSub:Object.keys(subs).length};}
+function consol(){let cli=0,recup=0,perdTot=0,cliAc=0,cliSem=0,metas=0;const agg={};
+  Object.keys(GCS).forEach(g=>{const Gc=GCS[g];cli+=Gc.clientes;perdTot+=Gc.perdidos_total;const s=subs[g];
+    if(s){recup+=(s.pontosRevertidos||0);cliAc+=(s.clientesComAcao||0);cliSem+=(s.clientesSemReversao||0);if(s.metaAtingida)metas++;}
+    const sr=(s&&s.segRev)||{};const segs=Gc.segs||{};
+    for(const k in segs){const x=segs[k];if(!agg[k])agg[k]={peso:x.peso,poss:0,real:0};agg[k].poss+=x.poss;agg[k].real+=x.real+(sr[k]||0);}});
+  let num=0,den=0;for(const k in agg){const a=agg[k];if(a.poss<=0)continue;den+=a.peso;num+=a.peso*(a.real/a.poss);}
+  const ice=den>0?Math.min(100,num/den*100):0;
+  return{ice,recup,perdTot,cliAc,cliSem,metas,nSub:Object.keys(subs).length};}
 function redeAcoes(){const m={};Object.values(subs).forEach(s=>(s.acoes||[]).forEach(a=>{const r=a.acoesResumo||{};for(const k in r)m[k]=(m[k]||0)+r[k];}));return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
 
 function render(){const t=consol();const v=document.getElementById('view');
@@ -266,7 +270,7 @@ function render(){const t=consol();const v=document.getElementById('view');
   const k=(l,val,s,c)=>`<div class="kc"><div class="l">${l}</div><div class="v" ${c?`style="color:${c}"`:''}>${val}</div><div class="s">${s||''}</div></div>`;
   const ra=redeAcoes();const maxA=ra.length?ra[0][1]:1;
   v.innerHTML=`<div class="kpi6">
-    ${k('ICE consolidado',nf(t.ice)+'<small>%</small>','ponderado por PDV',colorFor(t.ice))}
+    ${k('ICE consolidado',nf(t.ice)+'<small>%</small>','ponderado por segmento (rede)',colorFor(t.ice))}
     ${k('Gerências enviadas',t.nSub+'<small>/'+Object.keys(GCS).length+'</small>','líderes que enviaram','var(--info)')}
     ${k('Clientes com ação',nf(t.cliAc,0),'reversões assumidas','var(--good)')}
     ${k('Pontos revertidos',ptos(t.recup),'de '+ptos(t.perdTot),'var(--good)')}
